@@ -2,7 +2,7 @@ services:
   - type: web
     name: earthwise-butcher-image-classifier
     runtime: docker
-    plan: starter
+    plan: 0.5c-512mb
     region: oregon
     dockerfilePath: ./Dockerfile
     dockerContext: .
