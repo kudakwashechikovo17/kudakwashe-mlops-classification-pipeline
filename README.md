@@ -2,6 +2,23 @@
 
 This image-classification project predicts one of three visual labels for a meat photo: **fresh**, **half-fresh**, or **spoiled**. It uses non-tabular image data. The labels come from the downloaded Meat Freshness dataset; they are not a reliable food-safety assessment.
 
+## Demo
+
+- **Video presentation:** [Watch on YouTube](https://youtu.be/CTTNlFhVJcY)
+- **Live application:** [Earthwise Butchery MLOps Console](https://earthwise-butcher-image-classifier-4lkn.onrender.com/)
+
+### Application prediction
+
+The deployed application accepts an image and displays its predicted dataset label.
+
+![Earthwise Butchery MLOps Console showing an image prediction](screenshots/model-prediction-demo.png)
+
+### Locust load test
+
+Locust load-test snapshot targeting the Render application. At capture, the `/predict` row showed 12,386 requests, 3 failures, 390 ms median response time, and 440 ms 95th-percentile response time. Results are specific to this run.
+
+![Locust statistics for the Render application](screenshots/locust-render-load-test.png)
+
 ## Dataset
 
 The project uses the [Meat Freshness Image Dataset](https://www.kaggle.com/datasets/vinayakshanawad/meat-freshness-image-dataset). Its dataset README describes 2,266 images with Fresh, Half-Fresh, and Spoiled labels. Kaggle lists the dataset as CC0. Keep the dataset attribution and licence information with coursework submissions.
@@ -68,6 +85,24 @@ Open `http://127.0.0.1:8000` for the UI, `/docs` for Swagger, `/health` for serv
 
 The UI supports image prediction, labelled uploads, and incremental retraining. Label new uploads using the dataset's freshness categories only when the label is known. Uploaded photos and the SQLite registry are stored under `data/meat_freshness/`.
 
+## Interactive Locust dashboard for a presentation
+
+You can run the model and Locust locally without Docker. Open two PowerShell terminals in the repository folder. In the first terminal, start the API:
+
+```powershell
+python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
+```
+
+In the second terminal, start Locust's web interface:
+
+```powershell
+python -m locust -f locustfile.py --host http://127.0.0.1:8000 --web-host 127.0.0.1 --web-port 8089
+```
+
+Open `http://127.0.0.1:8089` for the Locust dashboard and `http://127.0.0.1:8000` for the model UI. On the Locust start page, enter a peak user count (for example, `10`) and spawn rate (for example, `2` users/second), keep the host as `http://127.0.0.1:8000`, and start the test. Use Advanced options to set a run time such as `30s`. The live statistics show request counts, failures, response times, and requests per second; use the `POST /predict` row to present model timings. The model UI lets you select an image and display its prediction response.
+
+This local setup runs one API process. To compare one versus multiple API containers, use the Docker Compose instructions below with Docker Desktop running. Stop the local services with Ctrl+C in their respective terminals.
+
 ## Docker and Render
 
 The Compose setup puts an Nginx proxy in front of one or more API containers. The proxy uses Docker DNS to discover the scaled API replicas and logs the selected upstream address.
@@ -93,6 +128,14 @@ python -m locust -f locustfile.py --host http://127.0.0.1:8000 --headless -u 10 
 
 Repeat with `-u 50` and `-u 100`, keeping `-r 10` and `--run-time 30s`; change the report name to match the user count. Repeat after scaling to two API containers, changing `freshness-1-container` to `freshness-2-container` in the report names. Check `docker compose logs proxy` to verify traffic reached both API replicas.
 
+The Locust workload sends four `/health` requests for each `/predict` request. In the HTML report and `*_stats.csv`, use the `POST /predict` row when reporting model latency; the `Aggregated` row combines health checks and predictions. To display a prediction response, submit an image to the running API:
+
+```powershell
+curl.exe -F "file=@C:\path\to\image.jpg" http://127.0.0.1:8000/predict
+```
+
+The JSON response contains `prediction`, `confidence`, and `top_predictions`. Replace the example path with an image file on your machine.
+
 Stop the containers after testing:
 
 ```powershell
@@ -103,16 +146,16 @@ The Docker image contains the tracked model but not the ignored dataset. Push up
 
 ## Load-test results and submission notes
 
-The following local comparison used the freshness model, Locust 2.37.10, the same workload from `locustfile.py`, a 30-second run, and a spawn rate of 10 users/second. All runs completed with zero failed requests. Measurements are machine-specific; do not treat them as Render performance results.
+The following local comparison uses only the `POST /predict` row from the Locust CSV reports. Runs used the freshness model, Locust 2.37.10, the workload from `locustfile.py`, a 30-second duration, and a spawn rate of 10 users/second. All prediction requests completed with zero failures. Measurements are machine-specific; do not treat them as Render performance results.
 
-| API containers | Users | Requests | Failures | Average (ms) | Median (ms) | P95 (ms) | Requests/s |
+| API containers | Users | Prediction requests | Failures | Average (ms) | Median (ms) | P95 (ms) | Predictions/s |
 | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| 1 | 10 | 701 | 0 | 74.6 | 21 | 170 | 26.55 |
-| 1 | 50 | 2,172 | 0 | 278.3 | 210 | 570 | 79.61 |
-| 1 | 100 | 2,466 | 0 | 621.4 | 680 | 970 | 89.85 |
-| 2 | 10 | 779 | 0 | 47.1 | 19 | 160 | 28.73 |
-| 2 | 50 | 3,367 | 0 | 70.5 | 45 | 210 | 121.98 |
-| 2 | 100 | 3,158 | 0 | 355.7 | 210 | 890 | 115.10 |
+| 1 | 10 | 136 | 0 | 134.2 | 85 | 180 | 5.15 |
+| 1 | 50 | 442 | 0 | 228.7 | 170 | 480 | 16.20 |
+| 1 | 100 | 500 | 0 | 577.3 | 620 | 900 | 18.22 |
+| 2 | 10 | 174 | 0 | 108.3 | 93 | 250 | 6.42 |
+| 2 | 50 | 692 | 0 | 93.6 | 87 | 170 | 25.07 |
+| 2 | 100 | 605 | 0 | 317.5 | 170 | 820 | 22.05 |
 
 HTML and CSV details for each run are saved under `results/locust/` with filenames beginning `freshness-1-container-` or `freshness-2-container-`. The proxy logs showed requests distributed across both API container IPs in the two-container test. These results show improved throughput at 50 and 100 users in this run, but do not imply linear scaling.
 
