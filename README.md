@@ -70,16 +70,50 @@ The UI supports image prediction, labelled uploads, and incremental retraining. 
 
 ## Docker and Render
 
-Run locally with:
+The Compose setup puts an Nginx proxy in front of one or more API containers. The proxy uses Docker DNS to discover the scaled API replicas and logs the selected upstream address.
+
+Start one API container:
 
 ```powershell
-docker compose up --build
+docker compose up --build --scale api=1 -d
+```
+
+Scale to two API containers for a comparison:
+
+```powershell
+docker compose up --scale api=2 --force-recreate -d
+docker compose ps
+```
+
+Run equivalent 30-second Locust tests at each scale, using the same workload and a spawn rate of 10 users per second. Install Locust in the active Python environment if needed. Example for 10 users on one API container:
+
+```powershell
+python -m locust -f locustfile.py --host http://127.0.0.1:8000 --headless -u 10 -r 10 --run-time 30s --html results/locust/freshness-1-container-10-users.html --csv results/locust/freshness-1-container-10-users
+```
+
+Repeat with `-u 50` and `-u 100`, keeping `-r 10` and `--run-time 30s`; change the report name to match the user count. Repeat after scaling to two API containers, changing `freshness-1-container` to `freshness-2-container` in the report names. Check `docker compose logs proxy` to verify traffic reached both API replicas.
+
+Stop the containers after testing:
+
+```powershell
+docker compose down
 ```
 
 The Docker image contains the tracked model but not the ignored dataset. Push updated source and model files to GitHub before rebuilding or redeploying if the public service should use this newly trained freshness model. Render's free service does not provide persistent local storage; uploaded files and retraining changes may be lost after restarts or spin-downs.
 
-## Load testing and submission notes
+## Load-test results and submission notes
 
-Use `locust -f locustfile.py --host http://127.0.0.1:8000` to run the load test. Existing reports in `results/locust/` measure the earlier local version and are not measurements of the new freshness model. Re-run the tests and record the actual results before submitting.
+The following local comparison used the freshness model, Locust 2.37.10, the same workload from `locustfile.py`, a 30-second run, and a spawn rate of 10 users/second. All runs completed with zero failed requests. Measurements are machine-specific; do not treat them as Render performance results.
+
+| API containers | Users | Requests | Failures | Average (ms) | Median (ms) | P95 (ms) | Requests/s |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 1 | 10 | 701 | 0 | 74.6 | 21 | 170 | 26.55 |
+| 1 | 50 | 2,172 | 0 | 278.3 | 210 | 570 | 79.61 |
+| 1 | 100 | 2,466 | 0 | 621.4 | 680 | 970 | 89.85 |
+| 2 | 10 | 779 | 0 | 47.1 | 19 | 160 | 28.73 |
+| 2 | 50 | 3,367 | 0 | 70.5 | 45 | 210 | 121.98 |
+| 2 | 100 | 3,158 | 0 | 355.7 | 210 | 890 | 115.10 |
+
+HTML and CSV details for each run are saved under `results/locust/` with filenames beginning `freshness-1-container-` or `freshness-2-container-`. The proxy logs showed requests distributed across both API container IPs in the two-container test. These results show improved throughput at 50 and 100 users in this run, but do not imply linear scaling.
 
 The classifier's outputs must be described as image-based dataset labels, not as confirmation that meat is fresh, spoiled, or safe to consume. Include the dataset source/licence, measured evaluation results, verified deployment URL, actual load-test results, and demo link in the final submission.
