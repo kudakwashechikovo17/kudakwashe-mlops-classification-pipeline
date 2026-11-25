@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: earthwise-butcher-image-classifier
+    runtime: docker
+    plan: starter
+    region: oregon
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    envVars:
+      - key: EARTHWISE_DATA_DIR
+        value: /var/data/data
+      - key: EARTHWISE_MODEL_DIR
+        value: /var/data/models
+    disk:
+      name: earthwise-persistent-storage
+      mountPath: /var/data
+      sizeGB: 1

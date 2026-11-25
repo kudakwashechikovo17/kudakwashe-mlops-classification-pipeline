@@ -7,3 +7,7 @@ data/cifar-10-batches-py/
 data/*.npy
 data/uploads/
 data/uploads.db
+data/labeled/
+data/train/
+data/test/
+data/*.zip

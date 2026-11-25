@@ -1,0 +1,91 @@
+{
+  "accuracy": 0.7647058823529411,
+  "balanced_accuracy": 0.8518518518518517,
+  "precision_macro": 0.7777777777777777,
+  "recall_macro": 0.8518518518518517,
+  "f1_macro": 0.7714285714285715,
+  "confusion_matrix": [
+    [
+      2,
+      0,
+      0
+    ],
+    [
+      0,
+      6,
+      0
+    ],
+    [
+      1,
+      3,
+      5
+    ]
+  ],
+  "class_names": [
+    "fish",
+    "poultry",
+    "red_meat"
+  ],
+  "classification_report": {
+    "fish": {
+      "precision": 0.6666666666666666,
+      "recall": 1.0,
+      "f1-score": 0.8,
+      "support": 2.0
+    },
+    "poultry": {
+      "precision": 0.6666666666666666,
+      "recall": 1.0,
+      "f1-score": 0.8,
+      "support": 6.0
+    },
+    "red_meat": {
+      "precision": 1.0,
+      "recall": 0.5555555555555556,
+      "f1-score": 0.7142857142857143,
+      "support": 9.0
+    },
+    "accuracy": 0.7647058823529411,
+    "macro avg": {
+      "precision": 0.7777777777777777,
+      "recall": 0.8518518518518517,
+      "f1-score": 0.7714285714285715,
+      "support": 17.0
+    },
+    "weighted avg": {
+      "precision": 0.8431372549019607,
+      "recall": 0.7647058823529411,
+      "f1-score": 0.7546218487394958,
+      "support": 17.0
+    }
+  },
+  "best_params": {
+    "sgdclassifier__alpha": 1e-05
+  },
+  "training_samples": 66,
+  "test_samples": 17,
+  "image_insights": {
+    "class_names": [
+      "fish",
+      "poultry",
+      "red_meat"
+    ],
+    "class_counts": [
+      2,
+      6,
+      9
+    ],
+    "feature_names": [
+      "Mean brightness",
+      "Red channel",
+      "Green channel",
+      "Blue channel"
+    ],
+    "feature_values": [
+      0.6972441673278809,
+      0.777416467666626,
+      0.6744236946105957,
+      0.6398921608924866
+    ]
+  }
+}

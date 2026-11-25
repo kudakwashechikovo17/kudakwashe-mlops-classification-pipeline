@@ -1,4 +1,17 @@
-from locust import HttpUser, task, between
+from io import BytesIO
+
+from locust import HttpUser, between, task
+from PIL import Image
+
+
+def sample_image() -> bytes:
+    image = Image.new("RGB", (32, 32), color=(150, 90, 70))
+    buffer = BytesIO()
+    image.save(buffer, format="PNG")
+    return buffer.getvalue()
+
+
+SAMPLE_IMAGE = sample_image()
 
 
 class PredictionUser(HttpUser):
@@ -10,5 +23,7 @@ class PredictionUser(HttpUser):
 
     @task(1)
     def predict(self):
-        image = b"\xff\xd8\xff\xd9"
-        self.client.post("/predict", files={"file": ("tiny.jpg", image, "image/jpeg")})
+        self.client.post(
+            "/predict",
+            files={"file": ("sample.png", SAMPLE_IMAGE, "image/png")},
+        )

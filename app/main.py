@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import html
+import logging
 import sqlite3
 import threading
 import time
@@ -12,26 +14,33 @@ from urllib.parse import quote
 import numpy as np
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.responses import HTMLResponse
-from fastapi.staticfiles import StaticFiles
-
-from src.model import CIFAR10_LABELS, METRICS_PATH
+from PIL import Image
+from src.model import (
+    DATA_DIR,
+    DEFAULT_CLASS_NAMES,
+    METRICS_PATH,
+    MODEL_PATH,
+    load_class_names,
+)
 from src.prediction import predict_image
 from scripts.retrain import retrain
+from src.preprocessing import IMAGE_EXTENSIONS, preprocess_image
 
 ROOT = Path(__file__).resolve().parents[1]
-UPLOADS_DIR = ROOT / "data" / "uploads"
-DATABASE_PATH = ROOT / "data" / "uploads.db"
+UPLOADS_DIR = DATA_DIR / "uploads"
+DATABASE_PATH = DATA_DIR / "uploads.db"
 STARTED_AT = time.time()
 
 UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
 
 app = FastAPI(
-    title="CIFAR-10 MLOps Image Classifier",
+    title="Earthwise Butchery Image Classifier",
     description="Image prediction and incremental retraining API",
     version="1.0.0",
 )
 
 retrain_lock = threading.Lock()
+logger = logging.getLogger(__name__)
 
 
 def init_database() -> None:
@@ -71,12 +80,20 @@ def safe_image_name(name: str) -> str:
 
 @app.get("/", response_class=HTMLResponse)
 def web_ui() -> str:
-    return """<!doctype html>
+    try:
+        class_names = load_class_names()
+    except (OSError, ValueError):
+        class_names = list(DEFAULT_CLASS_NAMES)
+    label_options = "".join(
+        f'<option value="{index}">{index} - {html.escape(name.replace("_", " ").title())}</option>'
+        for index, name in enumerate(class_names)
+    )
+    page = """<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>CIFAR-10 MLOps Console</title>
+  <title>Earthwise Butchery MLOps Console</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     body { font-family: Arial, sans-serif; margin: 0; background:#f4f7fb; color:#182230;}
@@ -92,7 +109,7 @@ def web_ui() -> str:
   </style>
 </head>
 <body>
-<header><h1>CIFAR-10 MLOps Console</h1><small id="uptime">Loading uptime...</small></header>
+<header><h1>Earthwise Butchery MLOps Console</h1><small id="uptime">Loading uptime...</small></header>
 <main>
   <div class="grid">
     <section class="card">
@@ -106,11 +123,7 @@ def web_ui() -> str:
       <h2>Upload retraining data</h2>
       <label>Class label:</label>
       <select id="label">
-        <option value="0">0 - airplane</option><option value="1">1 - automobile</option>
-        <option value="2">2 - bird</option><option value="3">3 - cat</option>
-        <option value="4">4 - deer</option><option value="5">5 - dog</option>
-        <option value="6">6 - frog</option><option value="7">7 - horse</option>
-        <option value="8">8 - ship</option><option value="9">9 - truck</option>
+        __LABEL_OPTIONS__
       </select>
       <input id="bulk" type="file" multiple accept="image/*,.zip">
       <button id="upload">Upload data</button>
@@ -157,15 +170,15 @@ fetch('/visualizations').then(r=>r.json()).then(d=>{
 </script>
 </body>
 </html>"""
+    return page.replace("__LABEL_OPTIONS__", label_options)
 
 
 @app.get("/health")
 def health() -> dict:
-    model_path = ROOT / "models" / "cifar10_model.pkl"
     return {
         "status": "healthy",
         "uptime_seconds": round(time.time() - STARTED_AT, 2),
-        "model_available": model_path.exists(),
+        "model_available": MODEL_PATH.exists(),
     }
 
 
@@ -184,8 +197,12 @@ async def predict(file: UploadFile = File(...)) -> dict:
 
 @app.post("/upload")
 async def upload(files: list[UploadFile] = File(...), label: int = Form(...)) -> dict:
-    if label < 0 or label >= len(CIFAR10_LABELS):
-        raise HTTPException(status_code=400, detail="Label must be between 0 and 9")
+    class_names = load_class_names()
+    if label < 0 or label >= len(class_names):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Label must be between 0 and {len(class_names) - 1}",
+        )
 
     saved = []
     label_folder = UPLOADS_DIR / str(label)
@@ -215,20 +232,39 @@ async def upload(files: list[UploadFile] = File(...), label: int = Form(...)) ->
 
     if not saved:
         raise HTTPException(status_code=400, detail="No valid images or ZIP file found")
-    return {"status": "saved", "saved_files": len(saved), "label": CIFAR10_LABELS[label], "files": saved}
+    return {"status": "saved", "saved_files": len(saved), "label": class_names[label], "files": saved}
 
 
 @app.post("/retrain")
 def trigger_retraining() -> dict:
-    if retrain_lock.locked():
+    if not retrain_lock.acquire(blocking=False):
         raise HTTPException(status_code=409, detail="A retraining job is already running")
 
     def run_job() -> None:
-        with retrain_lock:
+        try:
             retrain(UPLOADS_DIR)
+        except Exception as exc:
+            logger.exception("Earthwise model retraining failed")
+            history_path = ROOT / "models" / "retraining_history.json"
+            history_path.parent.mkdir(parents=True, exist_ok=True)
+            history = json.loads(history_path.read_text()) if history_path.exists() else []
+            history.append(
+                {
+                    "status": "failed",
+                    "error": str(exc),
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                }
+            )
+            history_path.write_text(json.dumps(history, indent=2), encoding="utf-8")
+        finally:
+            retrain_lock.release()
 
     thread = threading.Thread(target=run_job, daemon=True)
-    thread.start()
+    try:
+        thread.start()
+    except Exception:
+        retrain_lock.release()
+        raise
     return {"status": "retraining_started", "uploads_folder": str(UPLOADS_DIR)}
 
 
@@ -251,22 +287,54 @@ def metrics() -> dict:
 
 @app.get("/visualizations")
 def visualizations() -> dict:
-    data_path = ROOT / "data"
-    if (data_path / "test_images.npy").exists() and (data_path / "test_labels.npy").exists():
-        images = np.load(data_path / "test_images.npy")
-        labels = np.load(data_path / "test_labels.npy")
-        class_counts = np.bincount(labels, minlength=len(CIFAR10_LABELS)).tolist()
-        sample = images[:1000].astype(np.float32) / 255.0
+    class_names = load_class_names()
+    test_dir = DATA_DIR / "test"
+    class_counts = []
+    feature_rows = []
+    for class_name in class_names:
+        class_dir = test_dir / class_name
+        image_paths = (
+            [
+                path
+                for path in sorted(class_dir.rglob("*"))
+                if path.is_file() and path.suffix.lower() in IMAGE_EXTENSIONS
+            ]
+            if class_dir.is_dir()
+            else []
+        )
+        class_counts.append(len(image_paths))
+        for path in image_paths[:100]:
+            with Image.open(path) as image:
+                feature_rows.append(preprocess_image(image))
+
+    if feature_rows:
+        sample = np.stack(feature_rows)
         mean_brightness = float(sample.mean())
         mean_red = float(sample[:, :, :, 0].mean())
         mean_green = float(sample[:, :, :, 1].mean())
         mean_blue = float(sample[:, :, :, 2].mean())
+    elif METRICS_PATH.exists():
+        insights = json.loads(METRICS_PATH.read_text(encoding="utf-8")).get(
+            "image_insights", {}
+        )
+        if insights.get("class_names") == class_names:
+            class_counts = insights.get("class_counts", class_counts)
+            feature_values = insights.get("feature_values", [0.0, 0.0, 0.0, 0.0])
+            return {
+                "class_names": class_names,
+                "class_counts": class_counts,
+                "feature_names": insights.get(
+                    "feature_names",
+                    ["Mean brightness", "Red channel", "Green channel", "Blue channel"],
+                ),
+                "feature_values": feature_values,
+            }
+        mean_brightness = mean_red = mean_green = mean_blue = 0.0
     else:
-        class_counts = [0] * len(CIFAR10_LABELS)
         mean_brightness = mean_red = mean_green = mean_blue = 0.0
 
     return {
-        "class_names": CIFAR10_LABELS,
+        "class_names": class_names,
         "class_counts": class_counts,
         "feature_names": ["Mean brightness", "Red channel", "Green channel", "Blue channel"],
         "feature_values": [mean_brightness, mean_red, mean_green, mean_blue],

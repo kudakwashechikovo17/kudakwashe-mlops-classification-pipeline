@@ -1,0 +1,2 @@
+results/locust/*.csv text eol=lf
+results/locust/*.html text eol=lf

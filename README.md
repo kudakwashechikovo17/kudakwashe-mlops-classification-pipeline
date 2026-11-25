@@ -1,53 +1,34 @@
-# CIFAR-10 MLOps Classification Pipeline
+# Earthwise Butchery Image Classification MLOps Pipeline
 
-An end-to-end, Dockerized image classification system that demonstrates data acquisition, preprocessing, model training, evaluation, prediction, incremental retraining, API deployment, monitoring, and load testing.
+An image-based classification pipeline for Earthwise Butchery. It predicts one of three broad product groups from a photo: **red meat**, **poultry**, or **fish**. The project uses non-tabular image data; class labels are used only as supervised-learning targets.
 
-**Dataset:** [CIFAR-10](https://www.cs.toronto.edu/~kriz/cifar.html), 50,000 training images and 10,000 test images across 10 image classes.
+The provided source folder (`C:\Users\pc\Downloads\meat`) contains mixed, mostly unlabelled files. The label-review tool lets a person approve each image. Non-meat items, ambiguous images, screenshots, and mixed dishes should be skipped. Do not treat filename guesses as ground-truth labels.
 
-**Repository:** https://github.com/kudakwashechikovo17/kudakwashe-mlops-classification-pipeline
+## Current local prototype results
 
-> Replace this section with your public deployment URL and YouTube demo link before submission.
+The initial visually reviewed selection contains 83 images: 44 red-meat, 30 poultry, and 9 fish. The deterministic split has 66 training images and 17 held-out test images. The current run measured 76.47% accuracy, 85.19% balanced accuracy, 77.78% macro-precision, 85.19% macro-recall, and 77.14% macro-F1. The test split contains just two fish examples, so these results are highly preliminary and must not be presented as reliable production performance. Confirm all provisional image labels and collect substantially more varied photos, especially fish, before drawing conclusions.
 
-- Production URL: `https://YOUR-CLOUD-APP.example`
-- Video demo: `https://youtu.be/YOUR_VIDEO_ID`
+The classifier identifies only broad visual groups. It is not a food-safety, freshness, quality-grading, species-authentication, or traceability system.
 
-## Project structure
+## Pipeline and project structure
 
 ```text
-.
-├── app/main.py               # FastAPI API and browser UI
-├── data/                     # CIFAR-10, NumPy arrays, uploaded images
-├── models/                   # .pkl model and metrics
-├── notebook/project_name.ipynb
-├── scripts/download_cifar10.py
-├── scripts/train.py
-├── scripts/retrain.py
-├── src/model.py
-├── src/prediction.py
-├── src/preprocessing.py
-├── locustfile.py
-├── Dockerfile
-├── docker-compose.yml
-└── tests/test_api.py
+app/main.py                 FastAPI endpoints and browser UI
+data/labeled/<class>/       Human-reviewed images (local; not committed)
+data/train/<class>/         Reproducible training split (generated; not committed)
+data/test/<class>/          Held-out test split (generated; not committed)
+models/                     Trained model, class names, and measured metrics
+notebook/project_name.ipynb  Acquisition, preprocessing, insights, training, evaluation
+scripts/label_images.py     Local image-review and labelling UI
+scripts/prepare_dataset.py  Deterministic train/test split
+scripts/train.py            Hyperparameter tuning and model training
+scripts/retrain.py          Incremental retraining from labelled uploads
+src/                         Shared preprocessing, model, and prediction code
+tests/                       API and ML pipeline tests
+locustfile.py                Load-test user
 ```
 
-## Features
-
-- Image upload and three-label prediction response
-- 10 CIFAR-10 image classes
-- SQLite upload registry
-- Bulk image and ZIP upload
-- Triggered incremental retraining using the existing fitted model
-- Retraining history and status endpoint
-- Model uptime and health check
-- Dataset class distribution and feature visualizations
-- Docker deployment
-- Locust flood testing
-- Notebook evaluation with at least seven metrics and visualizations
-
-## Local setup on Windows
-
-### 1. Clone and create an environment
+## 1. Install the project
 
 ```powershell
 git clone https://github.com/kudakwashechikovo17/kudakwashe-mlops-classification-pipeline.git
@@ -58,145 +39,113 @@ python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
 ```
 
-If Python 3.12 is not available, Python 3.11 can also run this project.
+Python 3.11 is also supported by the project dependencies.
 
-### 2. Download and train
+## 2. Review and label the photos
+
+Run the local review tool and pass the supplied image directory:
 
 ```powershell
+python scripts/label_images.py "C:\Users\pc\Downloads\meat"
+```
+
+For each photo, choose **1: Red Meat**, **2: Poultry**, or **3: Fish**. Choose **0: Skip / not meat** for spices, eggs, screenshots, duplicates that are not exact copies, mixed dishes, or anything unclear. The tool records reviewed labels and copies approved photos into `data/labeled/<class>/`. It removes exact byte-identical duplicates from the review queue. Review labels carefully; do not label from filename alone.
+
+Aim for at least 15–20 distinct images in each class if available. The split script requires at least five per class and the training script requires three training examples per class for cross-validation. More diverse, correctly labelled images improve the usefulness of evaluation.
+
+## 3. Prepare the image dataset and train
+
+```powershell
+python scripts/prepare_dataset.py
 python scripts/train.py
 ```
 
-The script downloads CIFAR-10 if it is not already present, preprocesses it, trains the model, and writes:
+The split is reproducible (80% train, 20% test, fixed random seed). It keeps the held-out test images separate from hyperparameter selection. If you add more labels later, move or remove the generated `data/train/` and `data/test/` folders before preparing a new split.
 
-- `models/cifar10_model.pkl`
-- `models/metrics.json`
+Preprocessing applies EXIF orientation, RGB conversion, resizing, and normalization. Model features combine low-resolution RGB pixels and color histograms. Training uses a standardized logistic-loss SGD classifier with L2 regularization; three-fold stratified grid search selects the regularization strength using macro-F1. The model and measured metrics are written to:
 
-Training may take several minutes on a CPU.
+- `models/earthwise_meat_model.pkl`
+- `models/class_names.json`
+- `models/earthwise_metrics.json`
 
-### 3. Run the notebook
+Do not report results until `scripts/train.py` has run successfully on the human-labelled data.
+
+## 4. Run the notebook
 
 ```powershell
 jupyter notebook notebook/project_name.ipynb
 ```
 
-Run every cell from top to bottom. The notebook includes acquisition, preprocessing, three feature interpretations, hyperparameter choices, training, accuracy, balanced accuracy, precision, recall, F1, confusion matrix, and prediction.
+Run all cells from top to bottom. The notebook explains acquisition/setup, preprocessing, three image-feature insights, hyperparameter tuning, at least five test metrics, a confusion matrix, and a single-image prediction compared with its known test label.
 
-### 4. Start the API and UI
+### Google Colab
+
+1. Label the images locally as described above.
+2. Create a ZIP containing the class folders directly:
+
+   ```powershell
+   Compress-Archive -Path .\data\labeled\* -DestinationPath .\earthwise_labeled.zip
+   ```
+3. Open the notebook from [GitHub in Colab](https://colab.research.google.com/github/kudakwashechikovo17/kudakwashe-mlops-classification-pipeline/blob/main/notebook/project_name.ipynb).
+4. Select **Runtime → Run all**. When prompted, upload `earthwise_labeled.zip`.
+
+The dataset is not stored in GitHub; upload it to your Colab runtime when prompted. Colab sessions are temporary, so download the executed notebook and model before the session ends.
+
+## 5. Start the API and UI
+
+After training:
 
 ```powershell
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-Open:
+Open the UI at `http://127.0.0.1:8000`, Swagger at `/docs`, health at `/health`, metrics at `/metrics`, and image insights at `/visualizations`.
 
-- UI: http://127.0.0.1:8000
-- Swagger: http://127.0.0.1:8000/docs
-- Health: http://127.0.0.1:8000/health
-- Metrics: http://127.0.0.1:8000/metrics
+The UI supports single-image prediction, labelled bulk upload, and a retraining trigger. Uploaded images are saved in class-ID folders and recorded in SQLite before retraining. The saved fitted classifier is updated with `partial_fit`.
 
-## Docker
+## 6. Docker and cloud deployment
 
 ```powershell
 docker compose up --build
 ```
 
-Stop the containers:
+The container exposes port `8000`. Docker Compose mounts local `data/` and `models/` directories.
 
-```powershell
-docker compose down
-```
+For a public Render deployment, push the repository to GitHub and create a new **Blueprint** from it. Render reads `render.yaml`, builds the Docker image, uses `/health` as its health check, and provisions persistent storage for uploaded files, SQLite, and updated model files. The initial trained model is copied into persistent model storage on first startup. A Render account and the configured paid persistent-disk plan are required; do not claim a public deployment until Render reports it is live and `/health` has been verified.
 
-Build and run a container manually:
+## 7. Locust load testing
 
-```powershell
-docker build -t cifar10-mlops .
-docker run --rm -p 8000:8000 -v ${PWD}/data:/app/data -v ${PWD}/models:/app/models cifar10-mlops
-```
-
-## Prediction
-
-Upload an image through the browser or Swagger UI. API example:
-
-```powershell
-curl.exe -F "file=@C:\path\to\image.jpg" http://127.0.0.1:8000/predict
-```
-
-## Retraining procedure
-
-1. Upload multiple images in the browser and choose the correct label from `0` to `9`.
-2. Images are saved into `data/uploads/<label>/` and recorded in `data/uploads.db`.
-3. Press **Trigger retraining**.
-4. The API calls `scripts/retrain.py` logic and uses `partial_fit` to update the existing classifier.
-5. Check progress and history:
-
-```powershell
-curl.exe http://127.0.0.1:8000/retrain/status
-```
-
-For a ZIP, the ZIP contents should be placed in folders named `0` through `9`; the service assigns a supplied label to all extracted valid image types. Individual uploads use the selected label.
-
-## API routes
-
-| Method | Route | Purpose |
-|---|---|---|
-| GET | `/` | Web UI |
-| GET | `/health` | Uptime and model availability |
-| POST | `/predict` | Predict one image |
-| POST | `/upload` | Save multiple images or ZIP data |
-| POST | `/retrain` | Trigger incremental retraining |
-| GET | `/retrain/status` | Retraining state and history |
-| GET | `/metrics` | Test metrics |
-| GET | `/visualizations` | Chart data |
-
-## Locust flood testing
-
-Start the API, then run Locust:
+Start the API, then in another terminal run:
 
 ```powershell
 locust -f locustfile.py --host http://127.0.0.1:8000
 ```
 
-Open http://127.0.0.1:8089, choose users and spawn rate, and run. Export the CSV report and HTML report.
+Run tests with 10, 50, and 100 users. Record median and 95th-percentile latency, average response time, requests per second, failure percentage, and CPU/memory usage. Repeat with the required Docker container counts and save the actual Locust CSV/HTML reports and screenshots under `results/locust/`. Do not invent or estimate measured results.
 
-Test one container, then two containers by running Locust against a load balancer or a second independent API instance. Record:
+### Local single-instance measurements
 
-- Median and 95th-percentile latency
-- Average response time
-- Requests/second
-- Failure percentage
-- CPU and memory usage
+These are actual 20-second Locust runs against one local Uvicorn API process on this Windows workstation. They are **not** cloud results or multi-container comparisons. The Locust mix was four health checks per prediction request. CPU/memory was not captured.
 
-Save reports under `results/locust/` and add screenshots to this README. Do not claim numbers until measured.
+| Concurrent users | Requests | Avg response | Median | 95th percentile | Requests/sec | Failures |
+|---:|---:|---:|---:|---:|---:|---:|
+| 10 | 481 | 44 ms | 5 ms | 18 ms | 29.04 | 0% |
+| 50 | 2,755 | 21 ms | 12 ms | 81 ms | 152.65 | 0% |
+| 100 | 4,945 | 68 ms | 28 ms | 240 ms | 251.76 | 0% |
 
-## Cloud deployment
-
-The Docker image can be deployed to Render, Azure Container Apps, Google Cloud Run, or AWS ECS.
-
-### Example: Render
-
-1. Push this repository to GitHub.
-2. Create a new Render Web Service.
-3. Select Docker runtime.
-4. Set the service port to `8000`.
-5. Deploy and use the public URL.
-6. Verify `/health`, `/docs`, and prediction.
-
-For production persistence, mount object storage or persistent disk for `data/` and `models/`. The included SQLite database is suitable for demonstration and should be replaced with PostgreSQL for a production multi-replicated service.
+Reports: [10 users](./results/locust/single-container-10-users.html), [50 users](./results/locust/single-container-50-users.html), [100 users](./results/locust/single-container-100-users.html). The corresponding CSV files are in the same folder. Run new tests against the deployed service and compare one versus two Docker containers before claiming the assignment's container-scaling requirement is complete.
 
 ## Tests
 
 ```powershell
-python -m pip install pytest httpx
-pytest -q
+python -m pytest -q
 ```
 
-## Submission checklist
+## Remaining submission work
 
-- [ ] Replace deployment placeholder with public URL
-- [ ] Upload and link the camera-on YouTube demo
-- [ ] Include the trained `.pkl` file or a clearly documented one-command training step
-- [ ] Run and save notebook metrics
-- [ ] Run Locust at 10, 50, and 100 users
-- [ ] Save load-test screenshots and CSV/HTML reports
-- [ ] Push the complete project to GitHub
-- [ ] Submit the GitHub URL for attempt two
+- Verify the provisional labels on all 83 selected photos and collect substantially more images, especially fish; the current test set is too small to support robust performance claims.
+- Deploy the Dockerized app from the Render Blueprint and add the verified public URL.
+- Run Locust on one and two deployed Docker containers; capture CPU/memory and save the reports/screenshots.
+- Record a camera-on YouTube demo of prediction and retraining.
+- Add the demo link and final deployment/load-test results here.
+- Submit the GitHub repository URL.

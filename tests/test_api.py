@@ -15,10 +15,10 @@ def test_health():
 def test_ui():
     response = client.get("/")
     assert response.status_code == 200
-    assert "CIFAR-10 MLOps Console" in response.text
+    assert "Earthwise Butchery MLOps Console" in response.text
 
 
 def test_visualizations():
     response = client.get("/visualizations")
     assert response.status_code == 200
-    assert len(response.json()["class_names"]) == 10
+    assert response.json()["class_names"] == ["fish", "poultry", "red_meat"]
