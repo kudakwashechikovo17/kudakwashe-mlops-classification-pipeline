@@ -10,4 +10,5 @@ data/uploads.db
 data/labeled/
 data/train/
 data/test/
+data/meat_freshness/
 data/*.zip

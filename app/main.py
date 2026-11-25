@@ -34,7 +34,7 @@ STARTED_AT = time.time()
 UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
 
 app = FastAPI(
-    title="Earthwise Butchery Image Classifier",
+    title="Earthwise Butchery Meat Freshness Classifier",
     description="Image prediction and incremental retraining API",
     version="1.0.0",
 )

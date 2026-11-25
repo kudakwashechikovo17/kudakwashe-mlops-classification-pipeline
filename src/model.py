@@ -20,10 +20,12 @@ from sklearn.metrics import (
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 
-DEFAULT_CLASS_NAMES = ("red_meat", "poultry", "fish")
+DEFAULT_CLASS_NAMES = ("fresh", "half_fresh", "spoiled")
 
 ROOT = Path(__file__).resolve().parents[1]
-DATA_DIR = Path(os.environ.get("EARTHWISE_DATA_DIR", ROOT / "data"))
+DATA_DIR = Path(
+    os.environ.get("EARTHWISE_DATA_DIR", ROOT / "data" / "meat_freshness")
+)
 MODEL_DIR = Path(os.environ.get("EARTHWISE_MODEL_DIR", ROOT / "models"))
 MODEL_PATH = MODEL_DIR / "earthwise_meat_model.pkl"
 METRICS_PATH = MODEL_DIR / "earthwise_metrics.json"

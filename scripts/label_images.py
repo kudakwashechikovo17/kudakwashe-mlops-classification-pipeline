@@ -68,7 +68,7 @@ class ImageLabeler:
             ).pack(side=tk.LEFT, padx=5)
         tk.Button(
             buttons,
-            text="0: Skip / not meat",
+            text="0: Skip / unknown freshness",
             width=18,
             command=lambda: self.label("skip"),
         ).pack(side=tk.LEFT, padx=5)
@@ -107,7 +107,7 @@ class ImageLabeler:
         self.filename.configure(text=str(path))
         self.title.configure(
             text=f"Image {self.index + 1} of {len(self.paths)} | "
-            "Choose the broad product group; skip anything unclear or non-meat."
+            "Choose the known freshness label; skip images with no reliable label."
         )
 
     def label(self, selected: str) -> None:
@@ -143,7 +143,7 @@ class ImageLabeler:
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Review source photos and label them for the Earthwise image model."
+        description="Review source photos and label meat freshness classes."
     )
     parser.add_argument(
         "folder",

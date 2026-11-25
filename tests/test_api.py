@@ -21,4 +21,4 @@ def test_ui():
 def test_visualizations():
     response = client.get("/visualizations")
     assert response.status_code == 200
-    assert response.json()["class_names"] == ["fish", "poultry", "red_meat"]
+    assert response.json()["class_names"] == ["fresh", "half_fresh", "spoiled"]

@@ -1,79 +1,79 @@
 {
-  "accuracy": 0.7647058823529411,
-  "balanced_accuracy": 0.8518518518518517,
-  "precision_macro": 0.7777777777777777,
-  "recall_macro": 0.8518518518518517,
-  "f1_macro": 0.7714285714285715,
+  "accuracy": 0.835920177383592,
+  "balanced_accuracy": 0.8308209574179246,
+  "precision_macro": 0.8497679927000213,
+  "recall_macro": 0.8308209574179246,
+  "f1_macro": 0.8376633418202739,
   "confusion_matrix": [
     [
-      2,
-      0,
-      0
+      152,
+      24,
+      2
     ],
     [
-      0,
-      6,
-      0
-    ],
-    [
-      1,
-      3,
+      19,
+      135,
       5
+    ],
+    [
+      6,
+      18,
+      90
     ]
   ],
   "class_names": [
-    "fish",
-    "poultry",
-    "red_meat"
+    "fresh",
+    "half_fresh",
+    "spoiled"
   ],
   "classification_report": {
-    "fish": {
-      "precision": 0.6666666666666666,
-      "recall": 1.0,
-      "f1-score": 0.8,
-      "support": 2.0
+    "fresh": {
+      "precision": 0.8587570621468926,
+      "recall": 0.8539325842696629,
+      "f1-score": 0.856338028169014,
+      "support": 178.0
     },
-    "poultry": {
-      "precision": 0.6666666666666666,
-      "recall": 1.0,
-      "f1-score": 0.8,
-      "support": 6.0
+    "half_fresh": {
+      "precision": 0.7627118644067796,
+      "recall": 0.8490566037735849,
+      "f1-score": 0.8035714285714286,
+      "support": 159.0
     },
-    "red_meat": {
-      "precision": 1.0,
-      "recall": 0.5555555555555556,
-      "f1-score": 0.7142857142857143,
-      "support": 9.0
+    "spoiled": {
+      "precision": 0.9278350515463918,
+      "recall": 0.7894736842105263,
+      "f1-score": 0.8530805687203792,
+      "support": 114.0
     },
-    "accuracy": 0.7647058823529411,
+    "accuracy": 0.835920177383592,
     "macro avg": {
-      "precision": 0.7777777777777777,
-      "recall": 0.8518518518518517,
-      "f1-score": 0.7714285714285715,
-      "support": 17.0
+      "precision": 0.8497679927000213,
+      "recall": 0.8308209574179246,
+      "f1-score": 0.8376633418202739,
+      "support": 451.0
     },
     "weighted avg": {
-      "precision": 0.8431372549019607,
-      "recall": 0.7647058823529411,
-      "f1-score": 0.7546218487394958,
-      "support": 17.0
+      "precision": 0.8423572935235334,
+      "recall": 0.835920177383592,
+      "f1-score": 0.8369117760334032,
+      "support": 451.0
     }
   },
   "best_params": {
     "sgdclassifier__alpha": 1e-05
   },
-  "training_samples": 66,
-  "test_samples": 17,
+  "training_samples": 1815,
+  "test_samples": 451,
   "image_insights": {
     "class_names": [
-      "fish",
-      "poultry",
-      "red_meat"
+      "fresh",
+      "half_fresh",
+      "spoiled"
     ],
     "class_counts": [
-      2,
-      6,
-      9
+      178,
+      159,
+      114
     ],
     "feature_names": [
       "Mean brightness",
@@ -82,10 +82,10 @@
       "Blue channel"
     ],
     "feature_values": [
-      0.6972441673278809,
-      0.777416467666626,
-      0.6744236946105957,
-      0.6398921608924866
+      0.48132187128067017,
+      0.5565201640129089,
+      0.4570644199848175,
+      0.43038105964660645
     ]
   }
 }
