@@ -1,11 +1,12 @@
 # Earthwise Butchery Meat Freshness MLOps Pipeline
 
-This image-classification project predicts one of three visual labels for a meat photo: **fresh**, **half-fresh**, or **spoiled**. It uses non-tabular image data. The labels come from the downloaded Meat Freshness dataset; they are not a reliable food-safety assessment.
+## Project links
 
-## Demo
+- [Project notebook in Google Colab](https://colab.research.google.com/drive/1LNNcI4cIXyVIlMNjb3M-IYDgG_wcydWJ?usp=sharing)
+- [Video presentation](https://youtu.be/CTTNlFhVJcY)
+- [Live application](https://earthwise-butcher-image-classifier-4lkn.onrender.com/)
 
-- **Video presentation:** [Watch on YouTube](https://youtu.be/CTTNlFhVJcY)
-- **Live application:** [Earthwise Butchery MLOps Console](https://earthwise-butcher-image-classifier-4lkn.onrender.com/)
+## Screenshots
 
 ### Application prediction
 
@@ -18,6 +19,18 @@ The deployed application accepts an image and displays its predicted dataset lab
 Locust load-test snapshot targeting the Render application. At capture, the `/predict` row showed 12,386 requests, 3 failures, 390 ms median response time, and 440 ms 95th-percentile response time. Results are specific to this run.
 
 ![Locust statistics for the Render application](screenshots/locust-render-load-test.png)
+
+## Project overview
+
+This image-classification project predicts one of three visual labels for a meat photo: fresh, half-fresh, or spoiled. It uses non-tabular image data. The labels come from the downloaded Meat Freshness dataset; they are not a reliable food-safety assessment.
+
+The project demonstrates an end-to-end machine-learning workflow: prepare and inspect labelled images, train and evaluate a classifier, serve predictions through a web API, and exercise the service with load tests. It is an educational MLOps prototype, not a food inspection system.
+
+- Problem and input: classify a supplied meat image into one of the dataset's three labels: `fresh`, `half_fresh`, or `spoiled`.
+- Approach: correct image orientation, convert to RGB, resize and normalize; represent each image with low-resolution RGB pixels and color histograms; train a standardized SGD classifier with logistic loss. Three-fold stratified cross-validation selects regularization strength using macro-F1.
+- Output and use: receive a predicted dataset label, confidence, and ranked class probabilities from the web app or `/predict` API. The app also supports labelled image uploads and incremental retraining.
+- Evaluation: measure performance on the provided held-out validation split, with accuracy, balanced accuracy, macro-precision, macro-recall, macro-F1, and a confusion matrix. The reported scores describe this dataset split only.
+- Limitations: image predictions can be wrong and do not establish freshness, spoilage, or food safety. Do not use the model to decide whether food is safe to eat.
 
 ## Dataset
 
@@ -33,7 +46,7 @@ Verified source counts:
 | Validation / held-out evaluation | 178 | 159 | 114 | 451 |
 | Total | 853 | 789 | 624 | 2,266 |
 
-The trained model scored **83.59% accuracy** and **83.77% macro-F1** on the supplied 451-image validation split (balanced accuracy **83.08%**, macro-precision **84.98%**, macro-recall **83.08%**). These are results on this dataset split, not evidence of real-world generalization.
+The trained model scored 83.59% accuracy and 83.77% macro-F1 on the supplied 451-image validation split (balanced accuracy 83.08%, macro-precision 84.98%, macro-recall 83.08%). These are results on this dataset split, not evidence of real-world generalization.
 
 These are dataset labels, not evidence that food is safe to eat. Do not use this model to make food-safety decisions.
 
@@ -67,7 +80,7 @@ The importer will not overwrite existing `data/meat_freshness/train/` or `test/`
 
 ## Notebook
 
-Run all cells locally after importing the dataset:
+Open the [project notebook in Google Colab](https://colab.research.google.com/drive/1LNNcI4cIXyVIlMNjb3M-IYDgG_wcydWJ?usp=sharing) for the full walkthrough of data acquisition and preprocessing, image insights, model optimization, held-out evaluation, single-image prediction, retraining, and deployment. To run the repository copy locally after importing the dataset:
 
 ```powershell
 jupyter notebook notebook/project_name.ipynb
